@@ -89,7 +89,34 @@ def create_combined_E2V(superdarkpath, superbiaspath, qeflatpath, weights, title
     plotonesensor_E2V(img_list, title)
     return img_list
 
+ 
+
+def create_combined_ITL_pointings(superdarkpath, superbiaspath, qeflatpath, weights):    
+    superdark = get_ccd_from_id(None, superdarkpath, [])     # load superdark
+    superbias = get_ccd_from_id(None, superbiaspath, [])     # load superbias
     
+    num_ch = 16
+    img_list = []
+    MEDIAN = None
+
+    # loops over each amplifier in the CCD
+    for ch in range(num_ch):
+        arr = []                # defines an empty array for storing new combined flat for each amplifier
+        for i, aqeflatpath in enumerate(qeflatpath):
+            aqeflat = get_ccd_from_id(None, aqeflatpath, [], bias_frame=superbias)
+
+            img = aqeflat.unbiased_and_trimmed_image(ch + 1).getImage().array
+
+            MEDIAN = numpy.median(img)
+            img = img/MEDIAN     # this will normalize your image
+
+            arr.append(img*weights[i])
+
+        img = numpy.sum(arr,axis=0)/numpy.sum(weights)   # NEED THIS LINE TO MAKE COMBINED IN UV BAND (weights function called)
+        std = mad_std(img)
+        # puts images into a list to use below
+        img_list.append(img)  
+    return img_list
 
 
 # code for displaying one full E2V CCD 
