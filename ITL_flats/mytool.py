@@ -24,7 +24,8 @@ import matplotlib.image as mpimg
 
 # number of amplifiers/segments to be plotted in CCD
 num_ch = 16
-
+# number of sensors in one raft
+num_CCDs = 9
 
 # function to plot a full raft of CCDs
 def plotfullraft(raft, filter_band, ratio_img_list):
@@ -75,7 +76,7 @@ def create_combined_ITL(superdarkpath, superbiaspath, qeflatpath, weights, title
         # puts images into a list to use below
         img_list.append(img)  
         
-    plotonesensor_ITL(img_list, title)
+    #plotonesensor_ITL(img_list, title)
     return img_list
     
 
@@ -142,87 +143,8 @@ def create_combined_ITL_pointings(superdarkpath, superbiaspath, qeflatpath, weig
 
 
 
-# code for displaying one full E2V CCD 
-def plotonesensor_E2V(img_list, title):
-    
-    fig=plt.figure(figsize=(5, 5), dpi=150)   
-    columns = 8
-    rows = 2
-    
-    image_com = None
-    wholepixels = numpy.array(img_list).flatten()
-    mean = numpy.mean(wholepixels,dtype=numpy.float64)
-    std = numpy.std(wholepixels,dtype=numpy.float64)
-    ax = []
-    image_com = []
-    for i in range(num_ch):
-        if i < columns:
-            image_com.append(numpy.rot90(img_list[i + 8], 2))
-        else:
-            image_com.append(img_list[num_ch - (i + 1)])
-
-    if relativenorm==None:
-        relativenorm = internaladjustment(image_com)
-    N = 0.5
-    print(relativenorm)
-    
-    for i in range(0,16):
-        ax1 = fig.add_subplot(rows, columns, i + 1)
-        ax.append(ax1)
-        ax1.set_xticks([])   
-        ax1.set_yticks([])
-        im = plt.imshow(image_com[i]*relativenorm[i], vmin=mean-N*std,vmax=mean+N*std,origin="lower")
-        
-    plt.suptitle(title)
-    cbar = fig.colorbar(im, ax=ax, orientation="horizontal", anchor=(0,-1))
-    cbar.ax.tick_params(labelsize=8)
-    fig.subplots_adjust(wspace=0, hspace=0)
-    plt.show()
-
-    
-    
-
-# code for displaying one full E2V CCD with a smoothing filter
-def plotonesensor_E2V_smooth(img_list, title):
-    
-    fig=plt.figure(figsize=(5, 5), dpi=150)   
-    columns = 8
-    rows = 2
-
-    image_com = None
-    wholepixels = numpy.array(img_list).flatten()
-    mean = numpy.mean(wholepixels,dtype=numpy.float64)
-    std = numpy.std(wholepixels,dtype=numpy.float64)
-    ax = []
-    image_com = []
-    for i in range(num_ch):
-        if i < columns:
-            image_com.append(numpy.rot90(img_list[i + 8], 2))
-        else:
-            image_com.append(img_list[num_ch - (i + 1)])
-
-    if relativenorm==None:
-    relativenorm = internaladjustment(image_com)
-    N = 0.3
-    sigma=10              # changes width of smoothing
-    print(relativenorm)
-    
-    for i in range(0,16):
-        ax1 = fig.add_subplot(rows, columns, i + 1)
-        ax.append(ax1)
-        ax1.set_xticks([])   
-        ax1.set_yticks([])
-        im = plt.imshow(gaussian_filter(image_com[i]*relativenorm[i],sigma=sigma),vmin=mean-N*std,vmax=mean+N*std,origin="lower",cmap=pylab.get_cmap("tab20c"))
-    
-    plt.suptitle(title)
-    cbar = fig.colorbar(im, ax=ax, orientation="horizontal", anchor=(0,-1))
-    cbar.ax.tick_params(labelsize=8)
-    fig.subplots_adjust(wspace=0, hspace=0)
-    plt.show()
-    
-    
-
 # code for normalizing the amps in each sensor between amp edges, between the amp before it, and between amp rows (top and bottom)
+# the function which calculates “relative gain” by looking at differences between edges of neighboring amplifiers
 def internaladjustment(image_com):
     relativenorm = [1.]*16
     # Firstly, adjusting normalization using both edges on left and right
@@ -244,6 +166,86 @@ def internaladjustment(image_com):
     
     # function returns this array of normalized data for each amp 
     return relativenorm
+
+
+
+# code for displaying one full E2V CCD 
+def plotonesensor_E2V(img_list, title, relativenorm=None):
+    fig=plt.figure(figsize=(5, 5), dpi=150)   
+    columns = 8
+    rows = 2
+    
+    image_com = None
+    wholepixels = numpy.array(img_list).flatten()
+    mean = numpy.mean(wholepixels,dtype=numpy.float64)
+    std = numpy.std(wholepixels,dtype=numpy.float64)
+    ax = []
+    image_com = []
+    for i in range(num_ch):
+        if i < columns:
+            image_com.append(numpy.rot90(img_list[i + 8], 2))
+        else:
+            image_com.append(img_list[num_ch - (i + 1)])
+
+    if relativenorm is None:
+        relativenorm = internaladjustment(image_com)
+    N = 0.5
+    print(relativenorm)
+    
+    for i in range(0,16):
+        ax1 = fig.add_subplot(rows, columns, i + 1)
+        ax.append(ax1)
+        ax1.set_xticks([])   
+        ax1.set_yticks([])
+        im = plt.imshow(image_com[i]*relativenorm[i], vmin=mean-N*std,vmax=mean+N*std,origin="lower")
+        
+    plt.suptitle(title)
+    cbar = fig.colorbar(im, ax=ax, orientation="horizontal", anchor=(0,-1))
+    cbar.ax.tick_params(labelsize=8)
+    fig.subplots_adjust(wspace=0, hspace=0)
+    plt.show()
+    return image_com
+    
+    
+
+# code for displaying one full E2V CCD with a smoothing filter
+def plotonesensor_E2V_smooth(img_list, title, relativenorm=None):
+    fig=plt.figure(figsize=(5, 5), dpi=150)   
+    columns = 8
+    rows = 2
+
+    image_com = None
+    wholepixels = numpy.array(img_list).flatten()
+    mean = numpy.mean(wholepixels,dtype=numpy.float64)
+    std = numpy.std(wholepixels,dtype=numpy.float64)
+    ax = []
+    image_com = []
+    for i in range(num_ch):
+        if i < columns:
+            image_com.append(numpy.rot90(img_list[i + 8], 2))
+        else:
+            image_com.append(img_list[num_ch - (i + 1)])
+
+    if relativenorm is None:
+        relativenorm = internaladjustment(image_com)
+    N = 0.3
+    sigma=10              # changes width of smoothing
+    print(relativenorm)
+    
+    for i in range(0,16):
+        ax1 = fig.add_subplot(rows, columns, i + 1)
+        ax.append(ax1)
+        ax1.set_xticks([])   
+        ax1.set_yticks([])
+        im = plt.imshow(gaussian_filter(image_com[i]*relativenorm[i],sigma=sigma),vmin=mean-N*std,vmax=mean+N*std,origin="lower",cmap=pylab.get_cmap("tab20c"))
+    
+    plt.suptitle(title)
+    cbar = fig.colorbar(im, ax=ax, orientation="horizontal", anchor=(0,-1))
+    cbar.ax.tick_params(labelsize=8)
+    fig.subplots_adjust(wspace=0, hspace=0)
+    plt.show()
+    return image_com
+
 
 
 '''
@@ -273,7 +275,7 @@ def plotonesensor_ITL(img_list, title, relativenorm=None):
         else:
             image_com.append(img_list[i])                                # bootom row in normal order (08 ... 15)
     
-    if relativenorm==None:
+    if relativenorm is None:
         relativenorm = internaladjustment(image_com)
     N = 0.5
     print(relativenorm)
@@ -290,6 +292,7 @@ def plotonesensor_ITL(img_list, title, relativenorm=None):
     cbar.ax.tick_params(labelsize=8)
     fig.subplots_adjust(wspace=0, hspace=0)
     plt.show()
+    return image_com
     
 
 '''
@@ -330,10 +333,8 @@ def plotonesensor_ITL(img_list, title):
     
     
     
-    
 # code for displaying one full ITL CCD with a smoothing filter
-def plotonesensor_ITL_smooth(img_list, title):
-    
+def plotonesensor_ITL_smooth(img_list, title, relativenorm=None):
     fig=plt.figure(figsize=(5, 5), dpi=150)   
     columns = 8
     rows = 2
@@ -350,7 +351,7 @@ def plotonesensor_ITL_smooth(img_list, title):
         else:
             image_com.append(img_list[i])                                # bootom row in normal order (08 ... 15)
     
-    if relativenorm==None:
+    if relativenorm is None:
         relativenorm = internaladjustment(image_com)
     N = 0.3
     sigma=10              # changes width of smoothing
@@ -361,18 +362,20 @@ def plotonesensor_ITL_smooth(img_list, title):
         ax.append(ax1)
         ax1.set_xticks([])   
         ax1.set_yticks([])
-        im = plt.imshow(gaussian_filter(image_com[i]*relativenorm[i],sigma=sigma),vmin=mean-N*std,vmax=mean+N*std,origin="lower",cmap=pylab.get_cmap("tab20c"))
+        im = plt.imshow(gaussian_filter(image_com[i]*relativenorm[i],sigma=sigma),vmin=mean-N*std,vmax=mean+N*std,origin="lower",cmap=pylab.get_cmap("seismic"))
         
     plt.suptitle(title)
     cbar = fig.colorbar(im, ax=ax, orientation="horizontal", anchor=(0,-1))
     cbar.ax.tick_params(labelsize=8)
     fig.subplots_adjust(wspace=0, hspace=0)
     plt.show()
-    
+    return image_com
 
     
+    
+    
 # plotting one ITL sensor and saving the figure as an image for displaying full raft
-def plotonesensor_ITL_andsave(diff_arr, sensor_label, raft, i):
+def plotonesensor_ITL_andsave(diff_arr, sensor_label, raft, i, relativenorm=None):
     fig=plt.figure(figsize=(5, 5), dpi=150)   
     columns = 8
     rows = 2
@@ -388,32 +391,28 @@ def plotonesensor_ITL_andsave(diff_arr, sensor_label, raft, i):
         else:
             image_com.append(diff_arr[j])                               # bootom row in normal order (08 ... 15)
 
-    if relativenorm==None:
-    relativenorm = internaladjustment(image_com)
+    if relativenorm is None:
+        relativenorm = internaladjustment(image_com)
     N = 0.5
-    print(relativenorm)
     
-    for i in range(0,16):
-        ax1 = fig.add_subplot(rows, columns, i + 1)
+    for k in range(0,16):
+        ax1 = fig.add_subplot(rows, columns, k + 1)
         ax.append(ax1)
         ax1.set_xticks([])   
         ax1.set_yticks([])
-        im = plt.imshow(image_com[i]*relativenorm[i], vmin=mean-N*std,vmax=mean+N*std,origin="lower")
+        im = plt.imshow(image_com[k]*relativenorm[k], vmin=mean-N*std,vmax=mean+N*std,origin="lower")
         
     plt.suptitle('Differential Ratio between COMBINED and CCOB ' + str(sensor_label[i]))
     cbar = fig.colorbar(im, ax=ax, orientation="horizontal", anchor=(0,-1))
     cbar.ax.tick_params(labelsize=8)
     fig.subplots_adjust(wspace=0, hspace=0)
     plt.savefig(str(raft) + "_" + str(sensor_label[i]) + ".png")
-
+    return image_com
     
-    
-
-
     
     
 # plotting one E2V sensor and saving the figure as an image for displaying full raft
-def plotonesensor_E2V_andsave(diff_arr, sensor_label, raft, i):
+def plotonesensor_E2V_andsave(diff_arr, sensor_label, raft, i, relativenorm=None):
     fig=plt.figure(figsize=(5, 5), dpi=150)   
     columns = 8
     rows = 2
@@ -429,24 +428,24 @@ def plotonesensor_E2V_andsave(diff_arr, sensor_label, raft, i):
         else:
             image_com.append(img_list[num_ch - (j + 1)])
 
-    if relativenorm==None:
-    relativenorm = internaladjustment(image_com)
+    if relativenorm is None:
+        relativenorm = internaladjustment(image_com)
     N = 0.5
-    print(relativenorm)
     
-    for i in range(0,16):
+    for k in range(0,16):
         ax1 = fig.add_subplot(rows, columns, i + 1)
         ax.append(ax1)
         ax1.set_xticks([])   
         ax1.set_yticks([])
-        im = plt.imshow(image_com[i]*relativenorm[i], vmin=mean-N*std,vmax=mean+N*std,origin="lower")
+        im = plt.imshow(image_com[k]*relativenorm[k], vmin=mean-N*std,vmax=mean+N*std,origin="lower")
         
     plt.suptitle('Differential Ratio between COMBINED and CCOB ' + str(sensor_label[i]))
     cbar = fig.colorbar(im, ax=ax, orientation="horizontal", anchor=(0,-1))
     cbar.ax.tick_params(labelsize=8)
     fig.subplots_adjust(wspace=0, hspace=0)
     plt.savefig(str(raft) + "_" + str(sensor_label[i]) + ".png")
-    
+    return image_com
+
     
 # more color maps: 
     # N = 0.5
